@@ -1,0 +1,47 @@
+from flask import Flask, request, jsonify
+from flask_sqlalchemy import SQLAlchemy
+
+app = Flask(__name__)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///health_monitor.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db = SQLAlchemy(app)
+
+# Model for Health Records
+class HealthRecord(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    symptom = db.Column(db.String(100), nullable=False)
+    medication = db.Column(db.String(100), nullable=True)
+    doctor_visit = db.Column(db.String(100), nullable=True)
+
+# Initialize the database
+with app.app_context():
+    db.create_all()
+
+@app.route('/')
+def home():
+    return "Welcome to the Health Monitor API!"
+
+@app.route('/records', methods=['POST'])
+def add_record():
+    data = request.get_json()
+    new_record = HealthRecord(
+        symptom=data['symptom'],
+        medication=data.get('medication'),
+        doctor_visit=data.get('doctor_visit')
+    )
+    db.session.add(new_record)
+    db.session.commit()
+    return jsonify({'message': 'Record added successfully'}), 201
+
+@app.route('/records', methods=['GET'])
+def get_records():
+    records = HealthRecord.query.all()
+    return jsonify([{
+        'id': r.id,
+        'symptom': r.symptom,
+        'medication': r.medication,
+        'doctor_visit': r.doctor_visit
+    } for r in records]), 200
+
+if __name__ == "__main__":
+    app.run(debug=True)
